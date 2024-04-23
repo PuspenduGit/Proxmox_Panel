@@ -1,0 +1,5 @@
+django
+requests 
+asyncio
+proxmoxer
+tailscale

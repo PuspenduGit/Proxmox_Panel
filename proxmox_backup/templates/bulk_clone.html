@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk VM Clone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bulk VM Clone</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="source_vm">Source VM:</label><br>
+        <input type="text" id="source_vm" name="source_vm"><br>
+        <label for="num_clones">Number of Clones:</label><br>
+        <input type="number" id="num_clones" name="num_clones" min="1"><br>
+        <label for="new_first_vm">New First VM Name:</label><br>
+        <input type="text" id="new_first_vm" name="new_first_vm"><br>
+        <label for="ip_sub">Starting IP</label><br>
+        <input type="text" id="ip_sub" name="ip_sub"><br>
+        <label for="ip_gw">IP Gateway</label><br>
+        <input type="text" id="ip_gw" name="ip_gw"><br>
+        <button type="submit">Clone VMs</button>
+    </form>
+</body>
+</html>
