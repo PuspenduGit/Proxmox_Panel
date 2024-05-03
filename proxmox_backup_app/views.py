@@ -1,54 +1,33 @@
-import requests
-import asyncio
 from proxmoxer import ProxmoxAPI
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
+from django.middleware.csrf import get_token
 import time
-import json
 # from proxmox_backup.middleware import ProxmoxMiddleware
 
-def _init_proxmox(username, password, read_timeout):
-    proxmox_api = ProxmoxAPI('75.102.6.66', user=username, password=password, verify_ssl=False, timeout=read_timeout)
+def _init_proxmox(server_ip, username, password, read_timeout):
+    proxmox_api = ProxmoxAPI(server_ip, user=username, password=password, verify_ssl=False, timeout=read_timeout)
     return proxmox_api
-    
+
+@ensure_csrf_cookie    
 def login(request):
-    if request.method == 'GET':
-        return render(request, 'login.html')
     if request.method == 'POST':
         server_ip = request.POST.get('server_ip')
         password = request.POST.get('password')
         if not server_ip or not password:
             return render(request, 'login.html', {'error_message': 'Username and password are required.'})
         username = 'root@pam'
-        # proxmox = _init_proxmox(username, password, 3600)
+        resource = {
+            'server_ip': server_ip,
+            'username': username,
+            'password': password,
+        }
+        csrf_token = get_token(request)
+        request.session['resource'] = resource
+        request.session['csrf_token'] = csrf_token
         return HttpResponseRedirect('/proxmox/clone/')
     return render(request, 'login.html')
-        # if(request.proxmox_api):
-        #     return HttpResponseRedirect('/proxmox/clone/')
-        # print("Login view: POST request received")
-        # Retrieve username and password from the form
-        # username = request.POST.get('username')
-        # password = request.POST.get('password')
-        # if not username or not password:
-        #     error_message = "Username and password are required."
-        #     return render(request, 'login.html', {'error_message': error_message})
-        
-        # username += '@pam'
-        # data = {'username': username, 'password': password}
-        # Initialize Proxmox connection
-        # Check if the authentication is successful
-        # try:    
-        #     proxmox_api = request.proxmox_api
-        #     print(proxmox_api.nodes.get())
-        #     nodes = proxmox_api.nodes.get()
-        #     # if nodes is not None:
-        #     HttpResponseRedirect('/proxmox/clone/')
-        # except Exception as e:
-        #     error_message = "Invalid username or password. Please try again."
-        #     return render(request, 'login.html', {'error_message': error_message})
-        # HttpResponseRedirect('/proxmox/clone/')
-        # print("Login view: POST request received")
 
 def index(request):
     if request.method == 'GET':
@@ -77,14 +56,25 @@ def index(request):
                                                'stderr': stderr.decode('utf-8')})
     return render(request, 'index.html')
 
+@csrf_protect
 def clone(request):
-    # if not proxmox_api:
-    #     return HttpResponseRedirect('/proxmox/login/')
-    
-    if request.method == 'GET':
-        return render(request, 'bulk_clone.html')
     if request.method == 'POST':
-        proxmox = _init_proxmox('root@pam', 'AB@12345bs', 3600)
+        if not request.session.get('csrf_token') or not request.session.get('resource'):
+            return HttpResponseRedirect('/proxmox/login/')
+        
+        resource = request.session['resource']
+        
+        server_ip = resource['server_ip']
+        username = resource['username']
+        password = resource['password']
+        
+        # return JsonResponse({
+        #     'server_ip': server_ip,
+        #     'username': username,
+        #     'password': password
+        # })
+        
+        proxmox = _init_proxmox(server_ip, username, password, 3600)
         node = proxmox.nodes().get()[0]['node']
         source_vm = request.POST.get('source_vm')
         no_of_clones = request.POST.get('num_clones')
@@ -127,20 +117,6 @@ def clone(request):
             time.sleep(5)
             proxmox.nodes(node).qemu(new_vm_id).status.start.post()
             time.sleep(5)
-            # self.end_headers()
-            # proxmox.nodes(node).qemu(1001).clone.create(
-            #     newid=700,
-            #     name="chk",
-            #     full='1'  # Set to '1' to perform a full clone (clones disks)
-            # )
-            
-            # ipconfig_data = {
-            #     "ipconfig0": "ip=65.87.10.125/26,gw=65.87.10.65,ip6=dhcp",
-            # }
-            # proxmox.nodes(node).qemu(700).config.post(**ipconfig_data)
-            
-            # proxmox.nodes(node).qemu(700).cloudinit.get()
-            # proxmox.nodes(node).qemu(700).status.reboot.post()
-            # proxmox.nodes("<node_name>").qemu(clone_vm_id).status.start()
+        # server_ip = username = password = None
         return JsonResponse({'message': 'Cloning initiated'})
     return render(request, 'bulk_clone.html')
