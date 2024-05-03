@@ -16,11 +16,11 @@ def login(request):
     if request.method == 'GET':
         return render(request, 'login.html')
     if request.method == 'POST':
-        username = request.POST.get('username')
+        server_ip = request.POST.get('server_ip')
         password = request.POST.get('password')
-        if not username or not password:
+        if not server_ip or not password:
             return render(request, 'login.html', {'error_message': 'Username and password are required.'})
-        username += '@pam'
+        username = 'root@pam'
         # proxmox = _init_proxmox(username, password, 3600)
         return HttpResponseRedirect('/proxmox/clone/')
     return render(request, 'login.html')
