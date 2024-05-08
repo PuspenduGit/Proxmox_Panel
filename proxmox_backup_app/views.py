@@ -118,5 +118,7 @@ def clone(request):
             proxmox.nodes(node).qemu(new_vm_id).status.start.post()
             time.sleep(5)
         # server_ip = username = password = None
+        # request.session['resource'] = None
+        # request.session['csrf_token'] = None
         return JsonResponse({'message': 'Cloning initiated'})
     return render(request, 'bulk_clone.html')
