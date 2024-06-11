@@ -105,7 +105,7 @@ def clone(request):
             
             # Construct the ipconfig0 value with proper formatting
             ipconfig_data = {
-                "ipconfig0": "ip={}/26,gw={},ip6=dhcp".format(start_ip, ip_gw)
+                "ipconfig0": "ip={}/25,gw={},ip6=dhcp".format(start_ip, ip_gw)
             }
             
             # Print the ipconfig_data
