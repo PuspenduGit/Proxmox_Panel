@@ -6,11 +6,14 @@ from django.middleware.csrf import get_token
 import time
 # from proxmox_backup.middleware import ProxmoxMiddleware
 
+
 def _init_proxmox(server_ip, username, password, read_timeout):
-    proxmox_api = ProxmoxAPI(server_ip, user=username, password=password, verify_ssl=False, timeout=read_timeout)
+    proxmox_api = ProxmoxAPI(
+        server_ip, user=username, password=password, verify_ssl=False, timeout=read_timeout)
     return proxmox_api
 
-@ensure_csrf_cookie    
+
+@ensure_csrf_cookie
 def login(request):
     if request.method == 'POST':
         server_ip = request.POST.get('server_ip')
@@ -28,6 +31,7 @@ def login(request):
         request.session['csrf_token'] = csrf_token
         return HttpResponseRedirect('/proxmox/clone/')
     return render(request, 'login.html')
+
 
 def index(request):
     if request.method == 'GET':
@@ -56,24 +60,25 @@ def index(request):
                                                'stderr': stderr.decode('utf-8')})
     return render(request, 'index.html')
 
+
 @csrf_protect
 def clone(request):
     if request.method == 'POST':
         if not request.session.get('csrf_token') or not request.session.get('resource'):
             return HttpResponseRedirect('/proxmox/login/')
-        
+
         resource = request.session['resource']
-        
+
         server_ip = resource['server_ip']
         username = resource['username']
         password = resource['password']
-        
+
         # return JsonResponse({
         #     'server_ip': server_ip,
         #     'username': username,
         #     'password': password
         # })
-        
+
         proxmox = _init_proxmox(server_ip, username, password, 3600)
         node = proxmox.nodes().get()[0]['node']
         source_vm = request.POST.get('source_vm')
@@ -81,12 +86,12 @@ def clone(request):
         starting_vm = request.POST.get('new_first_vm')
         ip_sub = request.POST.get('ip_sub')
         ip_gw = request.POST.get('ip_gw')
-        
+
         if not source_vm or not no_of_clones or not starting_vm:
             return JsonResponse({'message': 'All fields are required'}, status=400)
-        
+
         # print(f"source_vm: {source_vm}, no_of_clones: {no_of_clones}, starting_vm: {starting_vm}, ip_sub: {ip_sub}, ip_gw: {ip_gw}")
-        
+
         ip_octets = ip_sub.split('.')
         last_octet = ip_octets[3]
         ip_octets = ip_octets[:3]
@@ -95,22 +100,22 @@ def clone(request):
             start_ip_list = ip_octets + [str(int(last_octet) + i)]
             start_ip = '.'.join(start_ip_list)
             # print(f"start_ip: {start_ip}, ip_gw: {ip_gw}")
-            
+
             proxmox.nodes(node).qemu(source_vm).clone.create(
                 newid=new_vm_id,
                 name=f"{new_vm_id}",
                 full='1'  # Set to '1' to perform a full clone (clones disks)
             )
-            time.sleep(25)
-            
+            time.sleep(20)
+
             # Construct the ipconfig0 value with proper formatting
             ipconfig_data = {
-                "ipconfig0": "ip={}/25,gw={},ip6=dhcp".format(start_ip, ip_gw)
+                "ipconfig0": "ip={}/26,gw={},ip6=dhcp".format(start_ip, ip_gw)
             }
-            
+
             # Print the ipconfig_data
             # print(ipconfig_data)
-            
+
             proxmox.nodes(node).qemu(new_vm_id).config.post(**ipconfig_data)
             time.sleep(5)
             proxmox.nodes(node).qemu(new_vm_id).cloudinit.get()
